@@ -270,7 +270,10 @@ void L1JetAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
   L1_SingleJet180 = gtAlgBlkHandle->begin(0)->getAlgoDecisionFinal(idx_L1_SingleJet180);
   L1_HT280 = gtAlgBlkHandle->begin(0)->getAlgoDecisionFinal(idx_L1_HT280);
   L1_ETMHF90 = gtAlgBlkHandle->begin(0)->getAlgoDecisionFinal(idx_L1_ETMHF90);
-  
+  std::cout << "L1_SingleJet180 = " << L1_SingleJet180 << std::endl;
+  std::cout << "L1_HT280 = " <<L1_HT280 << std::endl;
+  std::cout << "L1_ETMHF90 = " << L1_ETMHF90<< std::endl;
+
   // get reco jets and muons
   edm::Handle< std::vector<pat::Jet> > slimmedJets;
   iEvent.getByToken(slimmedJetsToken_,slimmedJets ); 
@@ -295,6 +298,7 @@ void L1JetAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
       }
     }
   }
+  std::cout<<"HLT_IsoMu24 = "<<HLT_IsoMu24<<endl;
  
   bool isMediumMuon = false;
   bool allLooseMuon = true;
@@ -312,6 +316,9 @@ void L1JetAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
       allLooseMuon = false;
     }
   }
+
+  std::cout<<"isMediumMuon = "<<isMediumMuon<<endl;
+  std::cout<<"allLooseMuon = "<<allLooseMuon<<endl;
 
   if(HLT_IsoMu24 && isMediumMuon && allLooseMuon){
 
@@ -348,12 +355,12 @@ void L1JetAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
       if(L1_SingleJet180) h_SingleJet180_num->Fill(leadingjetpt); 
       if(L1_HT280) h_HT280_num->Fill(offlineHT);
 
-      if(leadingjeteta < 3.0) {
+      if(abs(leadingjeteta) < 3.0) {
         h_SingleJet180_central_den->Fill(leadingjetpt);
         if(L1_SingleJet180) h_SingleJet180_central_num->Fill(leadingjetpt);
       }
 
-      if(leadingjeteta >= 3.0) {
+      if(abs(leadingjeteta) >= 3.0) {
         h_SingleJet180_forward_den->Fill(leadingjetpt);
         if(L1_SingleJet180) h_SingleJet180_forward_num->Fill(leadingjetpt);
       }
