@@ -90,9 +90,9 @@ private:
   edm::EDGetTokenT< BXVector<GlobalAlgBlk> > gtAlgBlkToken;
   edm::Handle< BXVector<GlobalAlgBlk> > gtAlgBlkHandle;
   edm::EDGetTokenT<vector<pat::Jet>> slimmedJetsToken_; // reco jets to match to l1 jets
-  edm::EDGetTokenT<vector<pat::Muon>> slimmedMuonsToken_; // needed for HLT_IsoMu24
+  edm::EDGetTokenT<vector<pat::Muon>> slimmedMuonsToken_; // needed for HLT_IsoMu20
   edm::EDGetTokenT<vector<pat::MET>> slimmedMETToken_;
-  edm::EDGetTokenT<edm::TriggerResults> trgresultsORIGToken_; // need to require HLT_IsoMu24 in order to match reco jets
+  edm::EDGetTokenT<edm::TriggerResults> trgresultsORIGToken_; // need to require HLT_IsoMu20 in order to match reco jets
   const edm::ESGetToken<L1TUtmTriggerMenu, L1TUtmTriggerMenuRcd> l1GtMenuToken_;
 
   edm::ESGetToken<L1TUtmTriggerMenu, L1TUtmTriggerMenuRcd> L1TUtmTriggerMenuEventToken;
@@ -101,10 +101,10 @@ private:
 
   // triggers
   bool L1_SingleJet180;
-  bool L1_HT280;
+  bool L1_HTT280er;
   bool L1_ETMHF90;
   int idx_L1_SingleJet180;
-  int idx_L1_HT280;
+  int idx_L1_HTT280er;
   int idx_L1_ETMHF90;
 
   // histograms
@@ -118,8 +118,8 @@ private:
   TH1F *h_SingleJet180_central_num;
   TH1F *h_SingleJet180_forward_den;
   TH1F *h_SingleJet180_forward_num;
-  TH1F *h_HT280_den;
-  TH1F *h_HT280_num;
+  TH1F *h_L1_HTT280er_den;
+  TH1F *h_L1_HTT280er_num;
   TH1F *h_ETMHF90_den;
   TH1F *h_ETMHF90_num;
 
@@ -157,8 +157,8 @@ L1JetAnalyzer::L1JetAnalyzer(const edm::ParameterSet& iConfig):
   h_SingleJet180_central_num= fs->make<TH1F>("h_SingleJet180_central_num","",40,0,400);
   h_SingleJet180_forward_den= fs->make<TH1F>("h_SingleJet180_forward_den","",40,0,400);
   h_SingleJet180_forward_num= fs->make<TH1F>("h_SingleJet180_forward_num","",40,0,400);
-  h_HT280_den= fs->make<TH1F>("h_HT280_den","",40,0,600);
-  h_HT280_num= fs->make<TH1F>("h_HT280_num","",40,0,600);
+  h_L1_HTT280er_den= fs->make<TH1F>("h_L1_HTT280er_den","",40,0,600);
+  h_L1_HTT280er_num= fs->make<TH1F>("h_L1_HTT280er_num","",40,0,600);
   h_ETMHF90_den= fs->make<TH1F>("h_ETMHF90_den","",40,0,400);
   h_ETMHF90_num= fs->make<TH1F>("h_ETMHF90_num","",40,0,400);
 
@@ -254,24 +254,34 @@ void L1JetAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
 
   // get index of L1 triggers
   int idx_L1_SingleJet180 = -1;
-  int idx_L1_HT280 = -1;
+  int idx_L1_HTT280er = -1;
   int idx_L1_ETMHF90 = -1;
   for (auto const &keyval : menu->getAlgorithmMap()) {
-
+    
     std::string const &name = keyval.second.getName();
+    //std::cout<<name<<"    ";
     unsigned int indx = keyval.second.getIndex();
-    if(name.find("L1_SingleJet180")!=string::npos) idx_L1_SingleJet180 = indx;
-    if(name.find("L1_HT280")!=string::npos) idx_L1_HT280 = indx;
-    if(name.find("L1_ETMHF90")!=string::npos) idx_L1_ETMHF90 = indx;
-
+    //std::cout<<indx<<std::endl;
+    if(name.find("L1_SingleJet180")!=string::npos) {
+      idx_L1_SingleJet180 = indx;
+      //std::cout<<name<<std::endl;
+    }
+    if(name.find("L1_HTT280er")!=string::npos) {
+      idx_L1_HTT280er = indx;
+      //std::cout<<name<<std::endl;
+    }
+    if(name.find("L1_ETMHF90")!=string::npos) {
+      idx_L1_ETMHF90 = indx;
+      //std::cout<<name<<std::endl;
+    }
   }
   
   // get l1 trigger results
   L1_SingleJet180 = gtAlgBlkHandle->begin(0)->getAlgoDecisionFinal(idx_L1_SingleJet180);
-  L1_HT280 = gtAlgBlkHandle->begin(0)->getAlgoDecisionFinal(idx_L1_HT280);
+  L1_HTT280er = gtAlgBlkHandle->begin(0)->getAlgoDecisionFinal(idx_L1_HTT280er);
   L1_ETMHF90 = gtAlgBlkHandle->begin(0)->getAlgoDecisionFinal(idx_L1_ETMHF90);
   std::cout << "L1_SingleJet180 = " << L1_SingleJet180 << std::endl;
-  std::cout << "L1_HT280 = " <<L1_HT280 << std::endl;
+  std::cout << "L1_HTT280er = " <<L1_HTT280er << std::endl;
   std::cout << "L1_ETMHF90 = " << L1_ETMHF90<< std::endl;
 
   // get reco jets and muons
@@ -284,8 +294,23 @@ void L1JetAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
   edm::Handle< std::vector<pat::MET> > slimmedMET;
   iEvent.getByToken(slimmedMETToken_, slimmedMET );
 
-  //get HLT_IsoMu24 result
-  bool HLT_IsoMu24(false); 
+
+  /*auto menuRcd = iSetup.get<L1TUtmTriggerMenuRcd>();
+  l1GtMenu = &menuRcd.get(L1TUtmTriggerMenuEventToken);
+  algorithmMap = &(l1GtMenu->getAlgorithmMap());
+  if(gtAlgBlkHandle.isValid()){
+    std::vector<GlobalAlgBlk>::const_iterator algBlk = gtAlgBlkHandle->begin(0);
+    if(algBlk != gtAlgBlkHandle->end(0)){
+      for (std::map<std::string, L1TUtmAlgorithm>::const_iterator itAlgo = algorithmMap->begin(); itAlgo != algorithmMap->end(); itAlgo++) {
+        std::string algName = itAlgo->first;
+        int algBit = itAlgo->second.getIndex();
+        std::cout<<algName<<"\t"<<algBit<<std::endl;
+      }
+    }
+  }*/
+
+  //get HLT_IsoMu20 result
+  bool HLT_IsoMu20(false); 
   edm::Handle<edm::TriggerResults> trigResults;
   iEvent.getByToken(trgresultsORIGToken_, trigResults);
   if( !trigResults.failedToGet() ) {
@@ -294,11 +319,11 @@ void L1JetAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
     for( int i_Trig = 0; i_Trig < N_Triggers; ++i_Trig ) {
       if (trigResults.product()->accept(i_Trig)) {
         TString TrigPath =trigName.triggerName(i_Trig);
-        if(TrigPath.Index("HLT_IsoMu24_v") >=0) HLT_IsoMu24=true; 
+        if(TrigPath.Index("HLT_IsoMu20_v") >=0) HLT_IsoMu20=true; 
       }
     }
   }
-  std::cout<<"HLT_IsoMu24 = "<<HLT_IsoMu24<<endl;
+  std::cout<<"HLT_IsoMu20 = "<<HLT_IsoMu20<<endl;
  
   bool isMediumMuon = false;
   bool allLooseMuon = true;
@@ -307,12 +332,12 @@ void L1JetAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
   // iterate through muons for event selection
   for(long unsigned int i = 0; i<(*slimmedMuons).size(); i++){
     
-    if (muon::isMediumMuon((*slimmedMuons)[i]) && (*slimmedMuons)[i].pt()>25) {
+    if (muon::isMediumMuon((*slimmedMuons)[i]) && (*slimmedMuons)[i].pt()>21 && (!isMediumMuon)) {
       isMediumMuon = true;
       muon_phi = (*slimmedMuons)[i].phi();
       muon_eta = (*slimmedMuons)[i].eta();
     }
-    if (!muon::isLooseMuon((*slimmedMuons)[i])) {
+    if (!muon::isLooseMuon((*slimmedMuons)[i]) && ((*slimmedMuons)[i].pt() < 10)) {
       allLooseMuon = false;
     }
   }
@@ -320,7 +345,7 @@ void L1JetAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
   std::cout<<"isMediumMuon = "<<isMediumMuon<<endl;
   std::cout<<"allLooseMuon = "<<allLooseMuon<<endl;
 
-  if(HLT_IsoMu24 && isMediumMuon && allLooseMuon){
+  if(HLT_IsoMu20 && isMediumMuon && allLooseMuon){
 
     float leadingjetpt = 0; float leadingjeteta = 99; float leadingjetphi = 0; float offlineHT = 0;
 
@@ -351,9 +376,9 @@ void L1JetAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
 
       // fill histograms
       h_SingleJet180_den->Fill(leadingjetpt); 
-      h_HT280_den->Fill(offlineHT);
+      h_L1_HTT280er_den->Fill(offlineHT);
       if(L1_SingleJet180) h_SingleJet180_num->Fill(leadingjetpt); 
-      if(L1_HT280) h_HT280_num->Fill(offlineHT);
+      if(L1_HTT280er) h_L1_HTT280er_num->Fill(offlineHT);
 
       if(abs(leadingjeteta) < 3.0) {
         h_SingleJet180_central_den->Fill(leadingjetpt);
